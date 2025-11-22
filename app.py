@@ -1,11 +1,18 @@
-from servicios import agregar_producto, editar_producto, listar_productos, eliminar_producto
 from manejo_archivos import inventory, load_inventory_csv, save_inventory_csv
-
+from servicios import (
+    agregar_producto,
+    listar_productos,
+    buscar_producto,
+    editar_producto, 
+    eliminar_producto,
+    calculate_stats,
+    load_external_csv
+)
 
 while True:
     # mostramos el menú de opciones
     print("------- GESTIÓN DE PRODUCTOS -------")
-    print("1) Agregar Producto\n2) Mostrar Productos \n3) Buscar Producto\n4) Editar Producto\n5) Eliminar Producto\n6) Mostrar Estadísticas \n7) Cargar CSV \n8) Salir")
+    print("1) Agregar Producto\n2) Mostrar Productos \n3) Buscar Producto\n4) Editar Producto\n5) Eliminar Producto\n6) Mostrar Estadísticas \n7) Guardar CSV \n8) Cargar CSV \n9) Salir")
 
     # solicitamos la opción al usuario
     option=input("\nIngresa una opción ->").strip()
@@ -35,7 +42,9 @@ while True:
         case 6:
             calculate_stats()
         case 7:
-            upload_inventory_csv()
+            save_inventory_csv(inventory)
         case 8:
-            print("¡Hasta la próxima!")
+            load_external_csv()
+        case 9:
+            print("Cerrando programa...")
             break # salimos del bucle y terminamos el programa
