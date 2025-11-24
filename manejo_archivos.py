@@ -1,3 +1,4 @@
+import os
 import csv
 
 def load_inventory_csv() -> list[dict]:
@@ -27,75 +28,68 @@ def save_inventory_csv(inventory: list[dict], ruta: str = 'inventory.csv') -> No
         print(f"Error al guardar inventario como CSV: {e}")
 
 
-def cargar_csv(ruta: str) -> tuple[list[dict], int]:
+def cargar_csv(ruta):
     """
-    Lee un archivo CSV externo con encabezado: nombre,precio,cantidad
-    Valida cada fila y devuelve:
-      - una lista de productos válidos con estructura: {"name", "price", "quantity"}
-      - la cantidad de filas inválidas que fueron omitidas
+    Lee un archivo CSV externo y devuelve:
+        (productos_validos, filas_invalidas)
+
+    El archivo debe tener **exactamente** este encabezado (en este orden):
+
+        name,price,quantity
+
+    Ejemplo de archivo válido:
+        name,price,quantity
+        Lapicero,1.2,10
+        Cuaderno,3.5,5
+        Borrador,0.8,20
     """
-    productos: list[dict] = []
+
+    if not os.path.exists(ruta):
+        print("Error: el archivo no existe.")
+        return [], 0
+
+    productos = []
     filas_invalidas = 0
 
-    try:
-        with open(ruta, 'r', encoding='utf-8') as file:
-            reader = csv.DictReader(file)
+    with open(ruta, mode="r", encoding="utf-8-sig", newline="") as f:
+        lector = csv.DictReader(f)
 
-            # Validamos que el archivo tenga encabezados
-            if reader.fieldnames is None:
-                print("Error: el archivo no tiene encabezado.")
-                return [], 0
+        encabezados_esperados = ["name", "price", "quantity"]
 
-            # Normalizamos encabezados a minúsculas y sin espacios
-            headers_normalizados = [h.strip().lower() for h in reader.fieldnames]
-            encabezado_esperado = ["nombre", "precio", "cantidad"]
+        # Validación estricta del encabezado
+        if lector.fieldnames != encabezados_esperados:
+            print("Error: el archivo debe tener el encabezado exactamente: 'name,price,quantity'.")
+            print(f"Encabezados encontrados: {lector.fieldnames}")
+            return [], 0
 
-            # Validamos que el encabezado sea exactamente nombre,precio,cantidad
-            if headers_normalizados != encabezado_esperado:
-                print("Error: el archivo debe tener el encabezado exactamente: 'nombre,precio,cantidad'.")
-                return [], 0
+        # Procesar filas
+        for numero_fila, fila in enumerate(lector, start=2):  # start=2 porque la fila 1 es el encabezado
+            try:
+                name = (fila["name"] or "").strip()
+                price_str = (fila["price"] or "").strip()
+                quantity_str = (fila["quantity"] or "").strip()
 
-            # Recorremos las filas de datos
-            for fila in reader:
-                try:
-                    # Extraemos campos y validamos que no estén vacíos
-                    nombre = (fila.get("nombre") or "").strip()
-                    precio_str = (fila.get("precio") or "").strip()
-                    cantidad_str = (fila.get("cantidad") or "").strip()
+                if not name:
+                    raise ValueError("Nombre vacío")
 
-                    if not nombre or not precio_str or not cantidad_str:
-                        filas_invalidas += 1
-                        continue
+                # Convertir tipos
+                price = float(price_str)
+                quantity = int(quantity_str)
 
-                    # Convertimos a tipos numéricos
-                    precio = float(precio_str)
-                    cantidad = int(cantidad_str)
+                if price < 0:
+                    raise ValueError("Precio negativo")
+                if quantity <= 0:
+                    raise ValueError("Cantidad debe ser mayor que 0")
 
-                    # Validamos que no sean negativos
-                    if precio < 0 or cantidad < 0:
-                        filas_invalidas += 1
-                        continue
+                productos.append({
+                    "name": name,
+                    "price": price,
+                    "quantity": quantity,
+                })
 
-                    # Si todo está bien, agregamos el producto en el formato interno
-                    productos.append({
-                        "name": nombre,
-                        "price": precio,
-                        "quantity": cantidad,
-                    })
+            except Exception as e:
+                filas_invalidas += 1
+                print(f"  ⚠ Fila {numero_fila} inválida ({e}). Datos: {fila}")
+                continue
 
-                except ValueError:
-                    # Error en la conversión numérica de esta fila → la omitimos
-                    filas_invalidas += 1
-                    continue
-
-        return productos, filas_invalidas
-
-    except FileNotFoundError:
-        print(f"Error: no se encontró el archivo '{ruta}'.")
-    except UnicodeDecodeError:
-        print(f"Error: no se pudo leer el archivo '{ruta}' por un problema de codificación (UTF-8 esperado).")
-    except Exception as e:
-        print(f"Error inesperado al cargar el archivo CSV: {e}")
-
-    # Si hubo algún error grave, devolvemos listas vacías
-    return [], 0
+    return productos, filas_invalidas
